@@ -109,7 +109,7 @@ export function Header({ cartTotal = 0 }: HeaderProps) {
               </a>
             ))}
             <a
-              href="tel:+212600000000"
+              href="tel:+212665153637"
               className="flex items-center gap-2 py-3 text-sm font-semibold mt-2"
               style={{ color: themeConfig.colors.accent }}
             >
