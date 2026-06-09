@@ -1,0 +1,14 @@
+[Unit]
+Description=Gunicorn instance to serve chridirect-erp Backend
+After=network.target postgresql.service
+
+[Service]
+User=mounadi05
+Group=mounadi05
+WorkingDirectory=/home/mounadi05/chridirect/erp
+ExecStart=/home/mounadi05/chridirect/erp/venv/bin/gunicorn --workers 3 --timeout 60 --bind 127.0.0.1:5000 run:app
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
