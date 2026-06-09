@@ -1,0 +1,12 @@
+services:
+  db:
+    image: postgres
+    container_name: sendflow-db
+    environment:
+      POSTGRES_USER: mounadi05
+      POSTGRES_PASSWORD: passtoM05
+      POSTGRES_DB: sendflow
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - ./pgdata:/var/lib/postgresql

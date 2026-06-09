@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh pr *)",
+      "Bash(grep -E '\\\\.\\(md|json|ts|tsx|js\\)$')",
+      "Bash(pg_isready)",
+      "Bash(node -e \"require.resolve\\('tailwindcss', {paths: ['/home/hkheiri/sendv2/frontend']}\\)\")",
+      "Bash(node -e \"require.resolve\\('tailwindcss'\\)\")",
+      "Bash(node -e \"console.log\\(require.resolve\\('tailwindcss'\\)\\)\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000)",
+      "Skill(caveman:caveman)",
+      "Skill(caveman:caveman:*)",
+      "Bash(ln -s /home/hkheiri/sendv2/frontend/node_modules /home/hkheiri/sendv2/node_modules)",
+      "Bash(pnpm --version)",
+      "Bash(psql \"postgresql://mounadi05:passtoM05@localhost:5432/sendflow\" -c \"SELECT id, name, is_active, is_available FROM users;\")"
+    ]
+  }
+}
