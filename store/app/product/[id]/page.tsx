@@ -6,6 +6,12 @@ import { Header } from '@/components/Header'
 import { StarRating } from '@/components/StarRating'
 import { themeConfig } from '@/lib/themeConfig'
 
+interface ColorItem {
+  hex: string
+  name_fr: string
+  image?: string
+}
+
 interface StoreProduct {
   id: number
   title_ar: string
@@ -17,14 +23,31 @@ interface StoreProduct {
   badge: string | null
   status: string
   sizes: string[]
-  colors: string[]
+  colors: (string | ColorItem)[]
   images: string[]
 }
 
 interface CartItem {
   size: string | null
-  color: string | null
+  color: string | null      // hex
+  colorName: string | null  // French name shown in ERP
   quantity: number
+}
+
+function parseColors(raw: (string | ColorItem)[]): ColorItem[] {
+  const NAMES: Record<string, string> = {
+    '#ffffff': 'Blanc', '#000000': 'Noir', '#808080': 'Gris',
+    '#f5f0e8': 'Beige', '#fffdd0': 'Crème', '#6b3f1f': 'Marron',
+    '#cc0000': 'Rouge', '#ffb6c1': 'Rose', '#ff8c00': 'Orange',
+    '#ffd700': 'Jaune', '#2e7d32': 'Vert', '#1565c0': 'Bleu',
+    '#00bcd4': 'Cyan', '#3f51b5': 'Indigo', '#7b1fa2': 'Violet',
+    '#c8920a': 'Doré', '#c0c0c0': 'Argenté',
+  }
+  return (raw || []).map((c) =>
+    typeof c === 'string'
+      ? { hex: c, name_fr: NAMES[c.toLowerCase()] ?? c }
+      : c
+  )
 }
 
 interface ProductPageProps {
@@ -40,8 +63,10 @@ export default function ProductPage({ params }: ProductPageProps) {
 
   const [product, setProduct] = useState<StoreProduct | null | 'loading'>('loading')
   const [imgIndex, setImgIndex] = useState(0)
+  const [colorImage, setColorImage] = useState<string | null>(null)
   const [selectedSize, setSelectedSize] = useState<string | null>(null)
   const [selectedColor, setSelectedColor] = useState<string | null>(null)
+  const [selectedColorName, setSelectedColorName] = useState<string | null>(null)
   const [qty, setQty] = useState(1)
   const [cartItems, setCartItems] = useState<CartItem[]>([])
   const [form, setForm] = useState({ name: '', phone: '', city: '' })
@@ -55,7 +80,12 @@ export default function ProductPage({ params }: ProductPageProps) {
       .then((data: StoreProduct | null) => {
         setProduct(data)
         if (data?.sizes?.length) setSelectedSize(data.sizes[0])
-        if (data?.colors?.length) setSelectedColor(data.colors[0])
+        if (data?.colors?.length) {
+          const first = parseColors(data.colors)[0]
+          setSelectedColor(first.hex)
+          setSelectedColorName(first.name_fr)
+          setColorImage(first.image || null)
+        }
       })
       .catch(() => setProduct(null))
   }, [id])
@@ -83,7 +113,7 @@ export default function ProductPage({ params }: ProductPageProps) {
         )
       )
     } else {
-      setCartItems((prev) => [...prev, { size: selectedSize, color: selectedColor, quantity: qty }])
+      setCartItems((prev) => [...prev, { size: selectedSize, color: selectedColor, colorName: selectedColorName, quantity: qty }])
     }
     setQty(1)
   }
@@ -106,13 +136,13 @@ export default function ProductPage({ params }: ProductPageProps) {
       const colors = product.colors ?? []
       if (sizes.length > 0 && !selectedSize) { setVariantError('الرجاء اختيار القياس'); return }
       if (colors.length > 0 && !selectedColor) { setVariantError('الرجاء اختيار اللون'); return }
-      finalItems = [{ size: selectedSize, color: selectedColor, quantity: qty }]
+      finalItems = [{ size: selectedSize, color: selectedColor, colorName: selectedColorName, quantity: qty }]
     }
 
     const orderItems = hasVariants
       ? finalItems.map((item) => ({
           name_fr: product.title_fr || product.title_ar,
-          variant: [item.size, item.color].filter(Boolean).join(' | ') || null,
+          variant: [item.size, item.colorName].filter(Boolean).join(' | ') || null,
           quantity: item.quantity,
           price: product.price,
         }))
@@ -183,10 +213,11 @@ export default function ProductPage({ params }: ProductPageProps) {
   }
 
   const sizes = product.sizes ?? []
-  const colors = product.colors ?? []
+  const colors = parseColors(product.colors ?? [])
   const images = (product.images ?? []).length > 0
     ? product.images
     : product.image_url ? [product.image_url] : []
+  const mainImage = colorImage || images[imgIndex] || ''
   const discount = product.original_price > product.price
     ? Math.round(((product.original_price - product.price) / product.original_price) * 100)
     : 0
@@ -206,9 +237,9 @@ export default function ProductPage({ params }: ProductPageProps) {
           {/* ── LEFT: Image gallery ── */}
           <div className="flex flex-col gap-3">
             <div className="relative w-full aspect-square rounded-2xl overflow-hidden shadow-md bg-white">
-              {images.length > 0 ? (
+              {images.length > 0 || mainImage ? (
                 <img
-                  src={images[imgIndex] || ''}
+                  src={mainImage}
                   alt={product.title_ar}
                   className="w-full h-full object-cover"
                 />
@@ -320,21 +351,36 @@ export default function ProductPage({ params }: ProductPageProps) {
             {/* ── Color selector ── */}
             {colors.length > 0 && (
               <div>
-                <p className="font-bold text-sm mb-2" style={{ color: NAV }}>اللون</p>
+                <p className="font-bold text-sm mb-2" style={{ color: NAV }}>
+                  اللون
+                  {selectedColorName && (
+                    <span className="font-normal text-gray-500 mr-2 text-xs">— {selectedColorName}</span>
+                  )}
+                </p>
                 <div className="flex flex-wrap gap-2.5">
                   {colors.map((c) => (
                     <button
-                      key={c}
+                      key={c.hex}
                       type="button"
-                      onClick={() => setSelectedColor(c)}
-                      className="w-10 h-10 rounded-lg transition-all hover:scale-105"
-                      style={{
-                        backgroundColor: c,
-                        outline: selectedColor === c ? `3px solid ${NAV}` : '2px solid #D1D5DB',
-                        outlineOffset: selectedColor === c ? '2px' : '0',
+                      onClick={() => {
+                        setSelectedColor(c.hex)
+                        setSelectedColorName(c.name_fr)
+                        setColorImage(c.image || null)
                       }}
-                      title={c}
-                    />
+                      className="w-12 h-12 rounded-xl overflow-hidden transition-all hover:scale-105 border-2"
+                      style={{
+                        borderColor: selectedColor === c.hex ? NAV : '#D1D5DB',
+                        outlineOffset: selectedColor === c.hex ? '2px' : '0',
+                        outline: selectedColor === c.hex ? `2px solid ${NAV}` : 'none',
+                      }}
+                      title={c.name_fr}
+                    >
+                      {c.image ? (
+                        <img src={c.image} alt={c.name_fr} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="block w-full h-full" style={{ backgroundColor: c.hex }} />
+                      )}
+                    </button>
                   ))}
                 </div>
               </div>
@@ -411,11 +457,11 @@ export default function ProductPage({ params }: ProductPageProps) {
                                 {item.size}
                               </span>
                             )}
-                            {item.color && (
-                              <span
-                                className="w-5 h-5 rounded-full border-2 border-white shadow-sm inline-block"
-                                style={{ backgroundColor: item.color }}
-                              />
+                            {item.colorName && (
+                              <span className="flex items-center gap-1">
+                                <span className="w-4 h-4 rounded-full border border-gray-200 inline-block" style={{ backgroundColor: item.color || undefined }} />
+                                <span className="text-xs font-medium" style={{ color: NAV }}>{item.colorName}</span>
+                              </span>
                             )}
                           </div>
                         </div>

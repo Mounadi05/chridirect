@@ -8,6 +8,12 @@ import {
   ShoppingBag, CheckCircle, XCircle, Clock
 } from 'lucide-react'
 
+export interface ColorItem {
+  hex: string
+  name_fr: string
+  image?: string
+}
+
 interface Product {
   id: number
   title_ar: string
@@ -20,11 +26,15 @@ interface Product {
   status: string
   sort_order: number
   sizes: string[]
-  colors: string[]
+  colors: (string | ColorItem)[]
   images: string[]
 }
 
-const EMPTY_FORM: Omit<Product, 'id'> = {
+interface ProductForm extends Omit<Product, 'id' | 'colors'> {
+  colors: ColorItem[]
+}
+
+const EMPTY_FORM: ProductForm = {
   title_ar: '',
   title_fr: '',
   description_ar: '',
@@ -91,12 +101,66 @@ function SizeEditor({ sizes, onChange }: { sizes: string[]; onChange: (v: string
   )
 }
 
+// ─── Color helpers ────────────────────────────────────────────────────────────
+const COLOR_PRESETS: ColorItem[] = [
+  { hex: '#ffffff', name_fr: 'Blanc' },
+  { hex: '#000000', name_fr: 'Noir' },
+  { hex: '#808080', name_fr: 'Gris' },
+  { hex: '#f5f0e8', name_fr: 'Beige' },
+  { hex: '#fffdd0', name_fr: 'Crème' },
+  { hex: '#6b3f1f', name_fr: 'Marron' },
+  { hex: '#cc0000', name_fr: 'Rouge' },
+  { hex: '#ffb6c1', name_fr: 'Rose' },
+  { hex: '#ff8c00', name_fr: 'Orange' },
+  { hex: '#ffd700', name_fr: 'Jaune' },
+  { hex: '#2e7d32', name_fr: 'Vert' },
+  { hex: '#1565c0', name_fr: 'Bleu' },
+  { hex: '#00bcd4', name_fr: 'Cyan' },
+  { hex: '#3f51b5', name_fr: 'Indigo' },
+  { hex: '#7b1fa2', name_fr: 'Violet' },
+  { hex: '#c8920a', name_fr: 'Doré' },
+  { hex: '#c0c0c0', name_fr: 'Argenté' },
+]
+
+function hexToFrName(hex: string): string {
+  const found = COLOR_PRESETS.find((p) => p.hex.toLowerCase() === hex.toLowerCase())
+  return found ? found.name_fr : hex
+}
+
+function parseColors(raw: (string | ColorItem)[]): ColorItem[] {
+  return (raw || []).map((c) =>
+    typeof c === 'string' ? { hex: c, name_fr: hexToFrName(c) } : c
+  )
+}
+
 // ─── Color Editor ─────────────────────────────────────────────────────────────
-function ColorEditor({ colors, onChange }: { colors: string[]; onChange: (v: string[]) => void }) {
-  const [picked, setPicked] = useState('#000000')
+function ColorEditor({ colors, onChange }: { colors: ColorItem[]; onChange: (v: ColorItem[]) => void }) {
+  const [picked, setPicked] = useState<ColorItem>(COLOR_PRESETS[1])
+  const [uploading, setUploading] = useState(false)
+  const colorFileRef = useRef<HTMLInputElement>(null)
+
+  async function handleColorImage(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await fetch('/api/upload', { method: 'POST', body: fd })
+      if (res.ok) {
+        const json = await res.json()
+        setPicked((prev) => ({ ...prev, image: json.url }))
+      }
+    } finally {
+      setUploading(false)
+      if (colorFileRef.current) colorFileRef.current.value = ''
+    }
+  }
 
   function addColor() {
-    if (!colors.includes(picked)) onChange([...colors, picked])
+    if (!colors.find((c) => c.hex === picked.hex)) {
+      onChange([...colors, { ...picked }])
+    }
   }
 
   return (
@@ -105,35 +169,78 @@ function ColorEditor({ colors, onChange }: { colors: string[]; onChange: (v: str
         <Palette size={14} className="inline ml-1" />
         الألوان المتاحة
       </label>
-      <div className="flex flex-wrap gap-2 mb-2">
+
+      {/* Added colors */}
+      <div className="flex flex-wrap gap-2 mb-3">
         {colors.map((c) => (
-          <button
-            key={c}
-            type="button"
-            onClick={() => onChange(colors.filter((x) => x !== c))}
-            className="w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center hover:scale-110 transition-transform relative group"
-            style={{ backgroundColor: c }}
-            title={`${c} — اضغط للحذف`}
-          >
-            <X size={10} className="text-white opacity-0 group-hover:opacity-100 drop-shadow" />
-          </button>
+          <div key={c.hex} className="flex items-center gap-1.5 px-2 py-1 rounded-full border-2 border-gray-200">
+            {c.image ? (
+              <img src={c.image} alt={c.name_fr} className="w-5 h-5 rounded-full object-cover border border-gray-200" />
+            ) : (
+              <span className="w-4 h-4 rounded-full border border-gray-300 flex-shrink-0" style={{ backgroundColor: c.hex }} />
+            )}
+            <span className="text-xs font-semibold text-gray-700">{c.name_fr}</span>
+            <button type="button" onClick={() => onChange(colors.filter((x) => x.hex !== c.hex))}>
+              <X size={10} className="text-gray-400 hover:text-red-500" />
+            </button>
+          </div>
         ))}
       </div>
-      <div className="flex gap-2 items-center">
+
+      {/* Preset swatches */}
+      <div className="flex flex-wrap gap-1.5 mb-3">
+        {COLOR_PRESETS.map((p) => (
+          <button
+            key={p.hex}
+            type="button"
+            onClick={() => setPicked({ ...p })}
+            title={p.name_fr}
+            className="w-7 h-7 rounded-full border-2 transition-transform hover:scale-110"
+            style={{
+              backgroundColor: p.hex,
+              borderColor: picked.hex === p.hex ? '#1A3B6E' : '#D1D5DB',
+              boxShadow: picked.hex === p.hex ? '0 0 0 2px #1A3B6E40' : undefined,
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Custom row: picker + name + optional image + add */}
+      <div className="flex flex-wrap gap-2 items-center bg-gray-50 rounded-xl p-3">
         <input
           type="color"
-          value={picked}
-          onChange={(e) => setPicked(e.target.value)}
-          className="w-10 h-10 rounded-lg border border-gray-200 cursor-pointer p-0.5"
+          value={picked.hex}
+          onChange={(e) => setPicked((prev) => ({ ...prev, hex: e.target.value, name_fr: hexToFrName(e.target.value) }))}
+          className="w-9 h-9 rounded-lg border border-gray-200 cursor-pointer p-0.5 flex-shrink-0"
         />
-        <span className="text-sm font-mono text-gray-500">{picked}</span>
+        <input
+          type="text"
+          value={picked.name_fr}
+          onChange={(e) => setPicked((prev) => ({ ...prev, name_fr: e.target.value }))}
+          placeholder="Nom (ex: Noir)"
+          className="w-28 px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none bg-white"
+        />
+        <button
+          type="button"
+          onClick={() => colorFileRef.current?.click()}
+          disabled={uploading}
+          className="flex items-center gap-1 px-2 py-1.5 border border-dashed border-gray-300 rounded-lg text-xs text-gray-500 hover:border-blue-400 hover:text-blue-500 transition-colors disabled:opacity-50"
+        >
+          {uploading ? <RefreshCw size={11} className="animate-spin" /> : <Upload size={11} />}
+          {picked.image ? 'Changer photo' : 'Photo couleur'}
+        </button>
+        {picked.image && (
+          <img src={picked.image} alt="" className="w-8 h-8 rounded-lg object-cover border border-gray-200" />
+        )}
+        <input ref={colorFileRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={handleColorImage} className="hidden" />
         <button
           type="button"
           onClick={addColor}
-          className="px-4 py-2 rounded-xl text-sm font-bold text-white"
+          disabled={uploading}
+          className="px-4 py-1.5 rounded-xl text-sm font-bold text-white ml-auto"
           style={{ backgroundColor: '#1A3B6E' }}
         >
-          + إضافة
+          + Ajouter
         </button>
       </div>
     </div>
@@ -150,8 +257,10 @@ function ProductModal({
   onClose: () => void
   onSaved: (p: Product) => void
 }) {
-  const [form, setForm] = useState<Omit<Product, 'id'>>(
-    product ? { ...product, sizes: product.sizes ?? [], colors: product.colors ?? [], images: product.images ?? [] } : { ...EMPTY_FORM }
+  const [form, setForm] = useState<ProductForm>(
+    product
+      ? { ...product, sizes: product.sizes ?? [], colors: parseColors(product.colors ?? []), images: product.images ?? [] }
+      : { ...EMPTY_FORM }
   )
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -206,6 +315,18 @@ function ProductModal({
     e.preventDefault()
     setSaving(true)
     setError('')
+
+    if (isNaN(form.price) || form.price < 0) {
+      setError('السعر الحالي يجب أن يكون رقماً صحيحاً')
+      setSaving(false)
+      return
+    }
+    if (isNaN(form.original_price) || form.original_price < 0) {
+      setError('السعر الأصلي يجب أن يكون رقماً صحيحاً')
+      setSaving(false)
+      return
+    }
+
     try {
       const url = isEdit ? `/api/products/${product!.id}` : '/api/products'
       const method = isEdit ? 'PUT' : 'POST'
@@ -312,7 +433,15 @@ function ProductModal({
                 min={0}
                 step="0.01"
                 value={form.price}
-                onChange={(e) => set('price', parseFloat(e.target.value) || 0)}
+                onChange={(e) => {
+                  const v = parseFloat(e.target.value)
+                  set('price', isNaN(v) ? 0 : v)
+                }}
+                onKeyDown={(e) => {
+                  if (!/[\d.,\-Backspace\t\ArrowLeft\ArrowRight\Delete]/.test(e.key) && !e.ctrlKey && !e.metaKey) {
+                    e.preventDefault()
+                  }
+                }}
                 className="w-full px-4 py-2.5 border rounded-xl text-sm focus:outline-none font-bold"
                 style={{ borderColor: '#C8920A', color: '#C8920A' }}
               />
@@ -326,7 +455,15 @@ function ProductModal({
                 min={0}
                 step="0.01"
                 value={form.original_price}
-                onChange={(e) => set('original_price', parseFloat(e.target.value) || 0)}
+                onChange={(e) => {
+                  const v = parseFloat(e.target.value)
+                  set('original_price', isNaN(v) ? 0 : v)
+                }}
+                onKeyDown={(e) => {
+                  if (!/[\d.,\-Backspace\t\ArrowLeft\ArrowRight\Delete]/.test(e.key) && !e.ctrlKey && !e.metaKey) {
+                    e.preventDefault()
+                  }
+                }}
                 className="w-full px-4 py-2.5 border rounded-xl text-sm focus:outline-none line-through text-gray-500"
                 style={{ borderColor: '#D1D5DB' }}
               />
@@ -593,7 +730,20 @@ function CommandsTab() {
                     {cmd.items.map((item, i) => (
                       <p key={i} className="text-xs text-gray-500">
                         {item.name_fr}
-                        {item.variant ? <span className="text-gray-400"> — {item.variant}</span> : null}
+                        {item.variant ? (
+                          <span className="inline-flex items-center gap-1 text-gray-500">
+                            {' — '}
+                            {/^#[0-9a-fA-F]{3,6}$/.test(item.variant) ? (
+                              <>
+                                <span
+                                  className="inline-block w-3 h-3 rounded-full border border-gray-300 flex-shrink-0"
+                                  style={{ backgroundColor: item.variant }}
+                                />
+                                {hexToFrName(item.variant)}
+                              </>
+                            ) : item.variant}
+                          </span>
+                        ) : null}
                         <span className="ml-1 font-semibold text-gray-700">×{item.quantity}</span>
                       </p>
                     ))}
@@ -870,8 +1020,10 @@ export default function AdminPage() {
                           {(p.sizes ?? []).slice(0, 4).map((s) => (
                             <span key={s} className="text-xs px-1.5 py-0.5 rounded border font-mono" style={{ borderColor: '#D1D5DB', color: '#6B7280' }}>{s}</span>
                           ))}
-                          {(p.colors ?? []).slice(0, 5).map((c) => (
-                            <span key={c} className="w-4 h-4 rounded-full border border-gray-200 inline-block flex-shrink-0" style={{ backgroundColor: c }} />
+                          {parseColors(p.colors ?? []).slice(0, 5).map((c) => (
+                            c.image
+                              ? <img key={c.hex} src={c.image} title={c.name_fr} alt={c.name_fr} className="w-4 h-4 rounded-full object-cover border border-gray-200 inline-block flex-shrink-0" />
+                              : <span key={c.hex} title={c.name_fr} className="w-4 h-4 rounded-full border border-gray-200 inline-block flex-shrink-0" style={{ backgroundColor: c.hex }} />
                           ))}
                         </div>
 
