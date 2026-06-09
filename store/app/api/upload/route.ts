@@ -1,8 +1,34 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { writeFile, mkdir } from 'fs/promises'
-import { join } from 'path'
+import { join, extname } from 'path'
+import { cookies } from 'next/headers'
 
-export async function POST(req: Request) {
+const ERP_URL = process.env.ERP_URL || 'http://localhost:5000'
+
+async function isAuthenticated(): Promise<boolean> {
+  const cookieStore = await cookies()
+  const token = cookieStore.get('store_admin_session')?.value
+  if (!token) return false
+
+  try {
+    const res = await fetch(
+      `${ERP_URL}/auth/verify-store-token?token=${encodeURIComponent(token)}`,
+      { cache: 'no-store' }
+    )
+    return res.ok
+  } catch {
+    return false
+  }
+}
+
+const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
+const ALLOWED_EXT  = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif'])
+
+export async function POST(req: NextRequest) {
+  if (!(await isAuthenticated())) {
+    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
+  }
+
   try {
     const formData = await req.formData()
     const file = formData.get('file') as File | null
@@ -10,8 +36,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 })
     }
 
-    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
-    if (!allowed.includes(file.type)) {
+    if (!ALLOWED_MIME.has(file.type)) {
       return NextResponse.json({ error: 'Only JPEG, PNG, WebP or GIF allowed' }, { status: 400 })
     }
 
@@ -22,11 +47,28 @@ export async function POST(req: Request) {
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
 
+    // Validate file magic bytes (not just Content-Type header)
+    const magic = buffer.slice(0, 4)
+    const isJpeg = magic[0] === 0xff && magic[1] === 0xd8
+    const isPng  = magic[0] === 0x89 && magic[1] === 0x50 && magic[2] === 0x4e && magic[3] === 0x47
+    const isWebp = buffer.slice(0, 12).toString('ascii', 8, 12) === 'WEBP'
+    const isGif  = magic.toString('ascii', 0, 3) === 'GIF'
+    if (!isJpeg && !isPng && !isWebp && !isGif) {
+      return NextResponse.json({ error: 'Invalid image file' }, { status: 400 })
+    }
+
+    // Force a safe extension based on detected type, ignore original filename
+    const mimeToExt: Record<string, string> = {
+      'image/jpeg': 'jpg',
+      'image/png':  'png',
+      'image/webp': 'webp',
+      'image/gif':  'gif',
+    }
+    const ext = mimeToExt[file.type] ?? 'jpg'
+    const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+
     const uploadsDir = join(process.cwd(), 'public', 'uploads')
     await mkdir(uploadsDir, { recursive: true })
-
-    const ext = file.type.split('/')[1].replace('jpeg', 'jpg')
-    const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
     await writeFile(join(uploadsDir, filename), buffer)
 
     return NextResponse.json({ url: `/uploads/${filename}` })
