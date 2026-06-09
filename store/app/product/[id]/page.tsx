@@ -241,7 +241,7 @@ export default function ProductPage({ params }: ProductPageProps) {
                 <img
                   src={mainImage}
                   alt={product.title_ar}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-contain"
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-gray-200">
