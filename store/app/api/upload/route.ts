@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { writeFile, mkdir } from 'fs/promises'
-import { join, extname } from 'path'
+import { join } from 'path'
 import { cookies } from 'next/headers'
 
 const ERP_URL = process.env.ERP_URL || 'http://localhost:5000'
@@ -22,7 +22,6 @@ async function isAuthenticated(): Promise<boolean> {
 }
 
 const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
-const ALLOWED_EXT  = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif'])
 
 export async function POST(req: NextRequest) {
   if (!(await isAuthenticated())) {
@@ -40,8 +39,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Only JPEG, PNG, WebP or GIF allowed' }, { status: 400 })
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      return NextResponse.json({ error: 'File must be under 5MB' }, { status: 400 })
+    if (file.size > 10 * 1024 * 1024) {
+      return NextResponse.json({ error: 'File must be under 10MB' }, { status: 400 })
     }
 
     const bytes = await file.arrayBuffer()
