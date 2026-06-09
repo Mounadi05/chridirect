@@ -15,7 +15,7 @@ class Config:
     
     # --- 3. Security & Cookie Settings (Crucial for Ngrok + React) ---
     SESSION_COOKIE_SAMESITE = 'Lax'
-    SESSION_COOKIE_SECURE = False 
+    SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "false").lower() == "true"
 
     # --- 4. Google OAuth Credentials ---
     GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
