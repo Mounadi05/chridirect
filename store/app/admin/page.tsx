@@ -1098,13 +1098,15 @@ export default function AdminPage() {
                       <button
                         onClick={() => handleDelete(p.id)}
                         disabled={deleting === p.id}
-                        className="p-2 rounded-lg transition-colors hover:bg-red-50 disabled:opacity-50"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all hover:bg-red-50 disabled:opacity-50"
+                        style={{ borderColor: '#FECACA', color: '#EF4444' }}
                       >
                         {deleting === p.id ? (
-                          <RefreshCw size={14} className="animate-spin text-red-400" />
+                          <RefreshCw size={13} className="animate-spin" />
                         ) : (
-                          <Trash2 size={14} className="text-red-400" />
+                          <Trash2 size={13} />
                         )}
+                        حذف
                       </button>
                     </div>
                   </div>
