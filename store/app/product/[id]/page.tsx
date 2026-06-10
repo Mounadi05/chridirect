@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, use, useEffect } from 'react'
+import { useState, use, useEffect, useRef } from 'react'
 import { ChevronLeft, ChevronRight, Plus, Minus, Trash2, CheckCircle } from 'lucide-react'
 import { Header } from '@/components/Header'
 import { StarRating } from '@/components/StarRating'
@@ -73,6 +73,7 @@ export default function ProductPage({ params }: ProductPageProps) {
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [variantError, setVariantError] = useState('')
+  const formRef = useRef<HTMLFormElement>(null)
 
   useEffect(() => {
     fetch(`/api/products/${id}`)
@@ -279,7 +280,7 @@ export default function ProductPage({ params }: ProductPageProps) {
                 {images.map((img, idx) => (
                   <button
                     key={idx}
-                    onClick={() => setImgIndex(idx)}
+                    onClick={() => { setImgIndex(idx); setColorImage(null) }}
                     className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all"
                     style={{ borderColor: idx === imgIndex ? GOLD : '#E5E7EB' }}
                   >
@@ -367,19 +368,15 @@ export default function ProductPage({ params }: ProductPageProps) {
                         setSelectedColorName(c.name_fr)
                         setColorImage(c.image || null)
                       }}
-                      className="w-12 h-12 rounded-xl overflow-hidden transition-all hover:scale-105 border-2"
+                      className="w-10 h-10 rounded-full overflow-hidden transition-all hover:scale-110 border-2"
                       style={{
                         borderColor: selectedColor === c.hex ? NAV : '#D1D5DB',
-                        outlineOffset: selectedColor === c.hex ? '2px' : '0',
                         outline: selectedColor === c.hex ? `2px solid ${NAV}` : 'none',
+                        outlineOffset: '2px',
                       }}
                       title={c.name_fr}
                     >
-                      {c.image ? (
-                        <img src={c.image} alt={c.name_fr} className="w-full h-full object-cover" />
-                      ) : (
-                        <span className="block w-full h-full" style={{ backgroundColor: c.hex }} />
-                      )}
+                      <span className="block w-full h-full" style={{ backgroundColor: c.hex }} />
                     </button>
                   ))}
                 </div>
@@ -479,7 +476,7 @@ export default function ProductPage({ params }: ProductPageProps) {
             )}
 
             {/* ── Order Form ── */}
-            <form onSubmit={handleSubmit} className="space-y-3 pt-1">
+            <form ref={formRef} id="order-form" onSubmit={handleSubmit} className="space-y-3 pt-1">
               {/* Name + Phone */}
               <div className="grid grid-cols-2 gap-3">
                 <input
@@ -566,6 +563,20 @@ export default function ProductPage({ params }: ProductPageProps) {
           </div>
         </div>
       </div>
+
+      {/* Sticky order button — mobile only */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 p-3 bg-white border-t border-gray-100 shadow-lg">
+        <button
+          type="button"
+          onClick={() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+          className="w-full py-4 rounded-xl font-black text-white text-base"
+          style={{ backgroundColor: NAV }}
+        >
+          أطلبيه الآن
+        </button>
+      </div>
+      {/* Bottom padding so content isn't hidden behind sticky bar */}
+      <div className="md:hidden h-20" />
     </main>
   )
 }

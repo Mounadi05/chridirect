@@ -537,7 +537,7 @@ function ProductModal({
                     <button
                       type="button"
                       onClick={() => removeImage(url)}
-                      className="absolute -top-1.5 -left-1.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow"
+                      className="absolute -top-1.5 -left-1.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center shadow"
                     >
                       <X size={10} />
                     </button>
@@ -546,7 +546,7 @@ function ProductModal({
               </div>
             )}
             {(form.images ?? []).length > 0 && (
-              <p className="text-xs text-gray-400 mt-1.5">الصورة ذات الإطار الذهبي هي الرئيسية. مرر على صورة للحذف.</p>
+              <p className="text-xs text-gray-400 mt-1.5">الصورة ذات الإطار الذهبي هي الرئيسية. اضغط × لحذف صورة.</p>
             )}
           </div>
 
