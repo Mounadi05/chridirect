@@ -236,7 +236,7 @@ export default function ProductPage({ params }: ProductPageProps) {
 
           {/* ── LEFT: Image gallery ── */}
           <div className="flex flex-col gap-3">
-            <div className="relative w-full aspect-square rounded-2xl overflow-hidden shadow-md bg-white">
+            <div className="relative w-full aspect-[3/4] rounded-2xl overflow-hidden shadow-md bg-white">
               {images.length > 0 || mainImage ? (
                 <img
                   src={mainImage}
