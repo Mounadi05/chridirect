@@ -237,7 +237,7 @@ export default function ProductPage({ params }: ProductPageProps) {
 
           {/* ── LEFT: Image gallery ── */}
           <div className="flex flex-col gap-3">
-            <div className="relative w-full aspect-square rounded-2xl overflow-hidden shadow-md bg-white">
+            <div className="relative w-full aspect-[4/3] lg:aspect-square rounded-2xl overflow-hidden shadow-md bg-white">
               {images.length > 0 || mainImage ? (
                 <img
                   src={mainImage}
@@ -276,7 +276,7 @@ export default function ProductPage({ params }: ProductPageProps) {
             </div>
 
             {images.length > 1 && (
-              <div className="flex gap-2 overflow-x-auto pb-1">
+              <div className="hidden lg:flex gap-2 overflow-x-auto pb-1">
                 {images.map((img, idx) => (
                   <button
                     key={idx}
@@ -380,6 +380,22 @@ export default function ProductPage({ params }: ProductPageProps) {
                     </button>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* ── Thumbnails (mobile only — desktop shows them under image) ── */}
+            {images.length > 1 && (
+              <div className="flex lg:hidden gap-2 overflow-x-auto pb-1">
+                {images.map((img, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => { setImgIndex(idx); setColorImage(null) }}
+                    className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all"
+                    style={{ borderColor: (colorImage ? img === colorImage : idx === imgIndex) ? GOLD : '#E5E7EB' }}
+                  >
+                    <img src={img} alt="" className="w-full h-full object-cover" />
+                  </button>
+                ))}
               </div>
             )}
 
