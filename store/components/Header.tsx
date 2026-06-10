@@ -2,7 +2,7 @@
 
 import { ShoppingCart, Menu, X, Phone } from 'lucide-react'
 import { themeConfig } from '@/lib/themeConfig'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 interface HeaderProps {
   cartTotal?: number
@@ -10,9 +10,22 @@ interface HeaderProps {
 
 export function Header({ cartTotal = 0 }: HeaderProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const [hidden, setHidden] = useState(false)
+
+  useEffect(() => {
+    let lastY = window.scrollY
+    const onScroll = () => {
+      const y = window.scrollY
+      if (y > lastY && y > 80) setHidden(true)
+      else setHidden(false)
+      lastY = y
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
 
   return (
-    <header className="sticky top-0 z-50 w-full">
+    <header className={`sticky top-0 z-50 w-full transition-transform duration-300 ${hidden ? '-translate-y-full md:translate-y-0' : 'translate-y-0'}`}>
       {/* Announcement bar */}
       <div
         className="w-full py-2 px-4 text-center text-xs md:text-sm font-medium"
