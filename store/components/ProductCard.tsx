@@ -47,12 +47,12 @@ export function ProductCard({
         )}
 
         {/* Image */}
-        <div className="relative w-full aspect-[3/4] overflow-hidden bg-gray-50">
+        <div className="relative w-full aspect-square overflow-hidden bg-white">
           {image ? (
             <img
               src={image}
               alt={titleAr}
-              className="w-full h-full object-cover transition-transform duration-500"
+              className="w-full h-full object-contain transition-transform duration-500"
               style={{ transform: 'scale(1)', transition: 'transform 0.5s ease' }}
               onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.08)')}
               onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}

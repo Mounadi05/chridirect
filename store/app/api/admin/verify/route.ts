@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createSession } from '@/lib/sessions'
 
 const ERP_URL = process.env.ERP_URL || 'http://localhost:5000'
 const COOKIE_NAME = 'store_admin_session'
@@ -32,9 +33,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: data.error || 'Token invalide' }, { status: 401 })
   }
 
-  // Token valid — set httpOnly session cookie
+  // Token valid — create a store session UUID (independent of ERP token)
+  const sessionId = createSession()
   const response = NextResponse.json({ ok: true })
-  response.cookies.set(COOKIE_NAME, token, {
+  response.cookies.set(COOKIE_NAME, sessionId, {
     httpOnly: true,
     sameSite: 'lax',
     path: '/',

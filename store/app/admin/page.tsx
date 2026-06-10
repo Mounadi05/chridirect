@@ -266,6 +266,7 @@ function ProductModal({
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
+  const pendingDeletes = useRef<string[]>([])
 
   const isEdit = !!product
 
@@ -305,6 +306,9 @@ function ProductModal({
   }
 
   function removeImage(url: string) {
+    if (url.startsWith('/uploads/')) {
+      pendingDeletes.current.push(url)
+    }
     setForm((prev) => {
       const next = (prev.images ?? []).filter((u) => u !== url)
       return { ...prev, images: next, image_url: next[0] ?? '' }
@@ -340,6 +344,11 @@ function ProductModal({
         throw new Error(j.error || 'Error saving product')
       }
       const saved = await res.json()
+      // Delete orphaned uploads only after successful save
+      for (const url of pendingDeletes.current) {
+        fetch('/api/upload', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url }) }).catch(() => {})
+      }
+      pendingDeletes.current = []
       onSaved(saved)
       onClose()
     } catch (err: unknown) {

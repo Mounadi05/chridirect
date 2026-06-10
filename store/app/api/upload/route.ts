@@ -1,24 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { writeFile, mkdir } from 'fs/promises'
-import { join } from 'path'
+import { writeFile, mkdir, unlink } from 'fs/promises'
+import { join, basename } from 'path'
 import { cookies } from 'next/headers'
-
-const ERP_URL = process.env.ERP_URL || 'http://localhost:5000'
+import { isValidSession } from '@/lib/sessions'
 
 async function isAuthenticated(): Promise<boolean> {
   const cookieStore = await cookies()
-  const token = cookieStore.get('store_admin_session')?.value
-  if (!token) return false
-
-  try {
-    const res = await fetch(
-      `${ERP_URL}/auth/verify-store-token?token=${encodeURIComponent(token)}`,
-      { cache: 'no-store' }
-    )
-    return res.ok
-  } catch {
-    return false
-  }
+  const sessionId = cookieStore.get('store_admin_session')?.value
+  if (!sessionId) return false
+  return isValidSession(sessionId)
 }
 
 const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
@@ -74,5 +64,38 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error('Upload error:', err)
     return NextResponse.json({ error: 'Upload failed' }, { status: 500 })
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  if (!(await isAuthenticated())) {
+    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
+  }
+
+  try {
+    const { url } = await req.json() as { url: string }
+    if (!url || !url.startsWith('/uploads/')) {
+      return NextResponse.json({ error: 'Invalid url' }, { status: 400 })
+    }
+
+    // basename strips any ../../ traversal — can only delete from uploads dir
+    const filename = basename(url)
+    const uploadsDir = join(process.cwd(), 'public', 'uploads')
+    const filePath = join(uploadsDir, filename)
+
+    // Double-check resolved path stays inside uploads
+    if (!filePath.startsWith(uploadsDir + '/')) {
+      return NextResponse.json({ error: 'Invalid path' }, { status: 400 })
+    }
+
+    await unlink(filePath)
+    return NextResponse.json({ ok: true })
+  } catch (err: unknown) {
+    // File already gone — not an error
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+      return NextResponse.json({ ok: true })
+    }
+    console.error('Delete error:', err)
+    return NextResponse.json({ error: 'Delete failed' }, { status: 500 })
   }
 }
