@@ -260,13 +260,13 @@ export default function ProductPage({ params }: ProductPageProps) {
               {images.length > 1 && (
                 <>
                   <button
-                    onClick={() => setImgIndex((p) => (p === 0 ? images.length - 1 : p - 1))}
+                    onClick={() => { setColorImage(null); setImgIndex((p) => (p === 0 ? images.length - 1 : p - 1)) }}
                     className="absolute left-2 top-1/2 -translate-y-1/2 p-2 bg-white/90 rounded-full shadow"
                   >
                     <ChevronLeft size={18} style={{ color: NAV }} />
                   </button>
                   <button
-                    onClick={() => setImgIndex((p) => (p + 1) % images.length)}
+                    onClick={() => { setColorImage(null); setImgIndex((p) => (p + 1) % images.length) }}
                     className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-white/90 rounded-full shadow"
                   >
                     <ChevronRight size={18} style={{ color: NAV }} />
@@ -282,7 +282,7 @@ export default function ProductPage({ params }: ProductPageProps) {
                     key={idx}
                     onClick={() => { setImgIndex(idx); setColorImage(null) }}
                     className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all"
-                    style={{ borderColor: idx === imgIndex ? GOLD : '#E5E7EB' }}
+                    style={{ borderColor: (colorImage ? img === colorImage : idx === imgIndex) ? GOLD : '#E5E7EB' }}
                   >
                     <img src={img} alt="" className="w-full h-full object-cover" />
                   </button>
